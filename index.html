@@ -16,7 +16,8 @@
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:Inter,-apple-system,"SF Pro Text",system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
 body{display:flex;align-items:center;justify-content:center}
 .phone{position:relative;width:393px;height:852px;background:var(--phone);border-radius:52px;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 40px 120px rgba(0,0,0,.7)}
-@media (max-width:440px),(max-height:880px){.phone{width:100vw;height:100vh;height:100dvh;border-radius:0}}
+.phone{flex:none;transform-origin:center center}
+@media (max-width:440px){.phone{width:100vw;height:100vh;height:100dvh;border-radius:0;transform:none!important}}
 .hint{position:fixed;left:16px;bottom:14px;font-size:12px;color:var(--dim);user-select:none}
 @media (max-width:440px){.hint{display:none}}
 
@@ -729,6 +730,15 @@ function setDep(v){
   document.getElementById('recD').textContent='$'+(1284.5+v).toLocaleString('en-US',{minimumFractionDigits:2});
   document.querySelectorAll('#depChips .chip').forEach(function(c){c.classList.toggle('on',c.textContent==='$'+v);});
 }
+
+/* scale the phone frame to fit short or narrow desktop windows */
+function fit(){
+  var p=document.getElementById('phone');
+  if(innerWidth<=440){p.style.transform='';return;}
+  var s=Math.min(1,(innerHeight-24)/852,(innerWidth-24)/393);
+  p.style.transform='scale('+s.toFixed(4)+')';
+}
+addEventListener('resize',fit); fit();
 
 var h=location.hash.replace('#','');
 if(h&&order.indexOf(h)>=0) jump(order.indexOf(h)); else go('verify');
