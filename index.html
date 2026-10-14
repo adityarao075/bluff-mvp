@@ -4,20 +4,43 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Bluff</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;background:#0b0c0e;overflow:hidden;font-family:-apple-system,Inter,system-ui,sans-serif}
+html,body{height:100%;background:#0b0c0e;overflow:hidden;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 body{display:flex;align-items:center;justify-content:center}
 /* frame keeps the exact aspect ratio of the design screenshots (698 x 1518) */
-.phone{position:relative;flex:none;width:393px;height:855px;border-radius:50px;overflow:hidden;background:#0e0f11;box-shadow:0 40px 120px rgba(0,0,0,.7)}
-@media (max-width:440px){.phone{width:100vw;height:100vh;height:100dvh;border-radius:0;box-shadow:none}}
+.phone{position:relative;flex:none;width:393px;height:855px;border-radius:50px;overflow:hidden;background:#0e0f11;box-shadow:0 40px 120px rgba(0,0,0,.7);transform-origin:center}
+@media (max-width:440px){.phone{width:100vw;height:100vh;height:100dvh;border-radius:0;box-shadow:none;transform:none!important}}
 .screen{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .22s ease}
 .screen.active{opacity:1;pointer-events:auto}
 .screen img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;user-select:none;-webkit-user-drag:none}
 .hs{position:absolute;cursor:pointer}
 body.debug .hs{outline:2px dashed rgba(63,215,127,.8);background:rgba(63,215,127,.12)}
+body.debug .live{outline:2px dashed rgba(255,170,60,.9)}
 .hint{position:fixed;left:16px;bottom:14px;font-size:12px;color:#5e6066;user-select:none}
 @media (max-width:440px){.hint{display:none}}
+
+/* live widgets drawn over the screenshots */
+.live{position:absolute;color:#f3f3f4}
+.chip{position:absolute;border-radius:999px;background:#1c1d20;color:#f3f3f4;display:flex;align-items:center;justify-content:center;font-weight:500;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.08);white-space:nowrap;user-select:none}
+.chip.on{background:#ececec;color:#111;font-weight:600}
+.tog{position:absolute;border-radius:999px;background:#2b2d32;cursor:pointer;box-shadow:inset 0 1px 2px rgba(0,0,0,.5)}
+.tog::after{content:"";position:absolute;top:8%;height:84%;aspect-ratio:1;left:7%;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.5)}
+.tog.on{background:#fff}
+.tog.on::after{left:auto;right:7%;background:#1a1b1e}
+.ring{position:absolute;border-radius:50%;border:2px solid #fff;cursor:pointer}
+.ring.off{border:3px solid #141518}
+.tint{position:absolute;inset:0;pointer-events:none}
+.tint i{position:absolute;inset:0;mix-blend-mode:hue;opacity:0;transition:opacity .25s;background-size:100% 100%;background-repeat:no-repeat}
+.tint.purple i,.tint.blue i,.tint.red i{opacity:1}
+.btn{position:absolute;border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:600;color:#111;background:linear-gradient(90deg,#d3d3d3,#eeeeee 45%,#f6f6f6);box-shadow:0 8px 24px rgba(0,0,0,.45);cursor:pointer;user-select:none}
+.btn:active{filter:brightness(.95)}
+input[type=range]{-webkit-appearance:none;appearance:none;position:absolute;height:4px;border-radius:2px;background:linear-gradient(90deg,#fff var(--p,37.5%),#2b2d33 var(--p,37.5%));outline:none;margin:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:30px;border-radius:50%;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.6);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:30px;height:30px;border:0;border-radius:50%;background:#fff}
+.muted{color:#8e9096}
 </style>
 </head>
 <body>
@@ -25,7 +48,7 @@ body.debug .hs{outline:2px dashed rgba(63,215,127,.8);background:rgba(63,215,127
 <div class="hint">← → arrow keys step through screens · tap buttons to navigate · press H to show tap targets</div>
 
 <script>
-/* Each screen is the original design screenshot. Hotspots are % of the image: [x, y, w, h, target]. */
+/* ---------- screens: original design screenshots + tap targets (% of frame: x, y, w, h, target) ---------- */
 var TAB = [
   [4, 90, 17, 8, 'home'], [22, 90, 20, 8, 'tables'], [43, 90, 14, 8, 'deposit'],
   [58, 90, 20, 8, 'hands'], [79, 90, 18, 8, 'me']
@@ -33,60 +56,193 @@ var TAB = [
 var SCREENS = [
   { id:'verify',   src:'screens/verify.png',   hs:[ [3, 84, 94, 7, 'home'] ] },
   { id:'home',     src:'screens/home.png',     hs:[
-      [62, 7.5, 34, 4.5, 'me'], [72, 34.5, 25, 3.5, 'tables'],
-      [20, 18, 33, 7, 'seat'],
+      [62, 7.5, 34, 4.5, 'me'], [72, 34.5, 25, 3.5, 'tables'], [20, 18, 33, 7, 'seat'],
       [4, 38.5, 92, 7.3, 'seat'], [4, 46.7, 92, 7.3, 'seat'], [4, 55.3, 92, 7.3, 'seat'], [4, 63.8, 92, 7.3, 'seat'],
       [4, 77.5, 92, 7.3, 'seat'] ].concat(TAB) },
-  { id:'seat',     src:'screens/seat.png',     hs:[ [2, 8, 13, 6, 'back'], [3, 89, 94, 6, 'table'] ] },
-  { id:'table',    src:'screens/table.png',    hs:[ [3, 7.5, 13, 6, 'settings'], [64, 89, 33, 7, 'showdown'] ] },
+  { id:'seat',     src:'screens/seat.png',     hs:[ [2, 8, 13, 6, 'back'] ] },
+  { id:'table',    src:'screens/table.png',    hs:[ [3, 7.5, 13, 6, 'settings'], [3, 89, 29, 7, 'showdown'], [33, 89, 29, 7, 'showdown'], [64, 89, 33, 7, 'showdown'], [3, 81, 14, 4, 'timer'] ] },
   { id:'showdown', src:'screens/showdown.png', hs:[ [3, 7.5, 13, 6, 'settings'], [53, 89, 44, 7, 'table'], [3, 89, 48, 7, 'tables'] ] },
   { id:'settings', src:'screens/settings.png', hs:[
       [63, 7.5, 12, 5, 'table'], [78, 0, 22, 100, 'table'],
       [4, 47.5, 70, 6.5, 'felt'], [4, 83, 70, 6.5, 'home'], [4, 89.5, 70, 6.5, 'tables'] ] },
-  { id:'felt',     src:'screens/felt.png',     hs:[ [2, 7.5, 15, 7, 'table'], [84, 58, 12, 5, 'table'], [4, 89.5, 92, 7, 'table'] ] },
+  { id:'felt',     src:'screens/felt.png',     hs:[ [2, 7.5, 15, 7, 'table'], [84, 58, 12, 5, 'table'], [4, 89.5, 92, 7, 'savefelt'] ] },
   { id:'tables',   src:'screens/tables.png',   hs:[
       [4, 16.5, 92, 8, 'table'], [4, 25.5, 92, 8, 'seat'],
       [4, 44, 92, 8, 'seat'], [4, 53.5, 92, 8, 'seat'], [4, 62.5, 92, 8, 'seat'] ].concat(TAB) },
   { id:'hands',    src:'screens/hands.png',    hs:[ [4, 23, 92, 8, 'showdown'] ].concat(TAB) },
   { id:'me',       src:'screens/me.png',       hs:[ [3, 44.5, 46, 7, 'deposit'] ].concat(TAB) },
-  { id:'deposit',  src:'screens/deposit.png',  hs:[ [86, 6.5, 11, 5.5, 'back'], [3, 89, 94, 7, 'receipt'] ] },
+  { id:'deposit',  src:'screens/deposit.png',  hs:[ [86, 6.5, 11, 5.5, 'back'] ] },
   { id:'receipt',  src:'screens/receipt.png',  hs:[ [86, 7, 11, 5.5, 'me'], [3, 89, 46, 7, 'me'], [51, 89, 46, 7, 'tables'] ] }
 ];
 
+var TINT = { table: 1, showdown: 1, felt: 1 };
+['purple','blue','red'].forEach(function(c){ Object.keys(TINT).forEach(function(k){ var im = new Image(); im.src = 'masks/' + k + '-' + c + '.png'; }); });
+function setTint(id, f){
+  var t = S[id].querySelector('.tint'), i = t.querySelector('i');
+  if(f) i.style.backgroundImage = 'url(masks/' + id + '-' + f + '.png)';
+  t.className = 'tint ' + f;
+}
 var phone = document.getElementById('phone');
+var S = {};
 SCREENS.forEach(function(s){
   var sec = document.createElement('section');
   sec.className = 'screen'; sec.id = s.id;
   var img = document.createElement('img'); img.src = s.src; img.alt = s.id; sec.appendChild(img);
+  /* felt recolor layer: a colored overlay shaped exactly like the green felt pixels, blended by hue,
+     so cards, suits and avatars keep their colors */
+  var tint = document.createElement('div'); tint.className = 'tint';
+  if(TINT[s.id]) tint.appendChild(document.createElement('i'));
+  sec.appendChild(tint);
   s.hs.forEach(function(h){
     var d = document.createElement('div');
     d.className = 'hs';
     d.style.left = h[0]+'%'; d.style.top = h[1]+'%'; d.style.width = h[2]+'%'; d.style.height = h[3]+'%';
-    d.onclick = function(e){ e.stopPropagation(); h[4]==='back' ? back() : go(h[4]); };
+    d.onclick = function(e){ e.stopPropagation(); act(h[4]); };
     sec.appendChild(d);
   });
   phone.appendChild(sec);
+  S[s.id] = sec;
 });
 
+function act(t){
+  if(t === 'back') return back();
+  if(t === 'timer') return startTimer();
+  if(t === 'savefelt'){ applyFelt(pendingFelt); return go('table'); }
+  go(t);
+}
+
+/* ---------- navigation ---------- */
 var order = SCREENS.map(function(s){ return s.id; });
 var stack = [], current = null, step = 0;
 function go(id, push){
   if(push === undefined) push = true;
   if(current === id) return;
-  if(current){ document.getElementById(current).classList.remove('active'); if(push) stack.push(current); }
+  if(current){ S[current].classList.remove('active'); if(push) stack.push(current); }
   current = id;
-  document.getElementById(id).classList.add('active');
+  S[id].classList.add('active');
   step = order.indexOf(id);
+  if(id === 'table') startTimer();
+  if(id === 'felt'){ pendingFelt = felt; drawSwatches(); setTint('felt', felt); }
 }
 function back(){ var p = stack.pop(); go(p || 'home', false); }
-
 document.addEventListener('keydown', function(e){
   if(e.key === 'ArrowRight' || e.key === ' '){ e.preventDefault(); go(order[(step+1) % order.length]); }
   if(e.key === 'ArrowLeft'){ e.preventDefault(); go(order[(step-1+order.length) % order.length]); }
   if(e.key === 'h' || e.key === 'H'){ document.body.classList.toggle('debug'); }
 });
 
-/* scale the frame to fit desktop windows; real phones go edge to edge */
+/* ---------- helpers ---------- */
+function el(parent, cls, style, html){
+  var d = document.createElement('div'); d.className = cls; d.setAttribute('style', style); if(html !== undefined) d.innerHTML = html; parent.appendChild(d); return d;
+}
+function chipRow(parent, items, top, h, font, sel){
+  var chips = [];
+  items.forEach(function(it, i){
+    var c = el(parent, 'chip' + (i === sel ? ' on' : ''), 'left:'+it[1]+'px;top:'+top+'px;width:'+it[2]+'px;height:'+h+'px;font-size:'+font+'px', it[0]);
+    c.onclick = function(e){ e.stopPropagation(); chips.forEach(function(x){ x.classList.remove('on'); }); c.classList.add('on'); if(it[3]) it[3](); };
+    chips.push(c);
+  });
+  return chips;
+}
+function money(v){ return '$' + v.toFixed(2); }
+
+/* ---------- Home + Hands filter chips ---------- */
+chipRow(S.home, [['All',18,45],['$0.10 / $0.25',70,119],['$0.25 / $0.50',196,120],['$0.50 / $1',323,110]], 243, 32, 15, 0);
+chipRow(S.hands, [['All',18,47],['Won',74,59],['Lost',141,58],['Big pots',209,84],['Showdowns',301,110]], 121, 34, 15, 0);
+
+/* ---------- Take a seat: live sheet (slider, chips, button) ---------- */
+(function(){
+  var sheet = el(S.seat, 'live', 'left:0;right:0;top:594px;bottom:0;background:#141518');
+  var amt = el(sheet, 'live', 'left:22px;top:9px;font-size:50px;font-weight:700;letter-spacing:-2px;line-height:1', '$50.00');
+  var bb  = el(sheet, 'live muted', 'right:22px;top:36px;font-size:18px', '100 BB');
+  var range = document.createElement('input'); range.type = 'range'; range.min = 20; range.max = 100; range.step = 5; range.value = 50;
+  range.setAttribute('style', 'left:22px;top:75px;width:349px'); sheet.appendChild(range);
+  var btn = el(sheet, 'btn', 'left:22px;top:173px;width:349px;height:54px;font-size:19px', 'Sit down · $50.00');
+  btn.onclick = function(){ go('table'); };
+  var chips;
+  function set(v){
+    v = +v; range.value = v; range.style.setProperty('--p', ((v-20)/80*100) + '%');
+    amt.textContent = money(v); bb.textContent = (v*2) + ' BB'; btn.textContent = 'Sit down · ' + money(v);
+    chips.forEach(function(c){ c.classList.toggle('on', c.textContent === '$' + v); });
+  }
+  range.oninput = function(){ set(range.value); };
+  chips = chipRow(sheet, [['$20',22,81,function(){set(20);}],['$30',111,81,function(){set(30);}],['$50',200,81,function(){set(50);}],['$100',289,82,function(){set(100);}]], 87, 40, 18, 2);
+  el(sheet, 'live muted', 'left:22px;top:142px;font-size:15px', 'Balance <b style="color:#fff;font-weight:600">$1,284.50</b>');
+  el(sheet, 'live muted', 'right:22px;top:142px;font-size:15px', 'Demo · test balance');
+  set(50);
+})();
+
+/* ---------- Deposit + receipt: live amounts ---------- */
+(function(){
+  var dep = 100;
+  var d = S.deposit, r = S.receipt;
+  /* overlays only appear once the amount differs from the $100 in the screenshot */
+  var big = el(d, 'live', 'left:0;right:0;top:142px;height:118px;background:#090b0c;display:none;align-items:flex-start;justify-content:center;font-weight:700',
+    '<span style="font-size:40px;margin-top:8px;margin-right:4px;font-weight:600">$</span><span id="depBig" style="font-size:120px;line-height:.88;letter-spacing:-6px"></span>');
+  var kv1 = el(d, 'live', 'right:31px;top:441px;height:22px;font-size:16px;font-weight:500;background:#15181b;padding-left:14px;display:none');
+  var kv2 = el(d, 'live', 'right:31px;top:604px;height:22px;font-size:16px;font-weight:500;background:#15181b;padding-left:14px;display:none');
+  var btn = el(d, 'btn', 'left:20px;top:764px;width:353px;height:52px;font-size:19px;display:none');
+  btn.onclick = function(){ go('receipt'); };
+  /* one cover for subline + amount, with the screenshot's green glow rebuilt underneath */
+  /* no painted background: a heavy backdrop blur smears the old text into the screenshot's own glow */
+  var rcover = el(r, 'live', 'left:0;right:0;top:262px;height:116px;backdrop-filter:blur(26px);-webkit-backdrop-filter:blur(26px);-webkit-mask-image:linear-gradient(transparent,#000 18%,#000 82%,transparent);mask-image:linear-gradient(transparent,#000 18%,#000 82%,transparent);display:none');
+  var rsub = el(rcover, 'live muted', 'left:0;right:0;top:14px;text-align:center;font-size:15px');
+  var rbig = el(rcover, 'live', 'left:0;right:0;top:44px;text-align:center;font-size:44px;font-weight:700;letter-spacing:-2px;line-height:1.1;color:#3fd77f;text-shadow:0 0 24px rgba(63,215,127,.45)');
+  var rk1 = el(r, 'live', 'right:31px;top:462px;height:22px;font-size:16px;font-weight:500;background:#15181b;padding-left:14px;display:none');
+  var rk2 = el(r, 'live', 'right:31px;top:626px;height:22px;font-size:16px;font-weight:500;background:#15181b;padding-left:14px;display:none');
+  var chips = chipRow(d, [['$25',48,67,function(){set(25);}],['$50',120,67,function(){set(50);}],['$100',189,78,function(){set(100);}],['$250',271,75,function(){set(250);}]], 351, 47, 17, 2);
+  function set(v){
+    dep = v; var f = money(v), show = v !== 100 ? 'flex' : 'none';
+    document.getElementById('depBig').textContent = v;
+    [big, kv1, kv2, btn, rcover, rk1, rk2].forEach(function(x){ x.style.display = show; });
+    kv1.textContent = f; kv2.textContent = f; btn.textContent = 'Deposit ' + f;
+    rsub.textContent = f + ' is in your wallet and ready to play.'; rbig.textContent = '+' + f; rk1.textContent = f;
+    rk2.textContent = '$' + (1284.5 + v).toLocaleString('en-US', {minimumFractionDigits:2});
+    chips.forEach(function(c){ c.classList.toggle('on', c.textContent === '$' + v); });
+  }
+  /* the screenshot already shows $100 selected and the button; a tap target covers the image button */
+  var hsBtn = el(d, 'hs', 'left:3%;top:89%;width:94%;height:7%'); hsBtn.onclick = function(){ go('receipt'); };
+})();
+
+/* ---------- Game settings toggles ---------- */
+[[155,true],[210,false],[265,true],[320,false]].forEach(function(t){
+  var g = el(S.settings, 'tog' + (t[1] ? ' on' : ''), 'left:225px;top:'+t[0]+'px;width:48px;height:33px');
+  g.onclick = function(e){ e.stopPropagation(); g.classList.toggle('on'); };
+});
+
+/* ---------- Felt chooser: swatch selection + live recolor of the table ---------- */
+var felt = '', pendingFelt = '';
+var FELTS = ['', 'purple', 'blue', 'red'];
+var swatches = [];
+function drawSwatches(){
+  swatches.forEach(function(s, i){
+    var sel = FELTS[i] === pendingFelt;
+    s.className = 'ring' + (sel ? '' : (i === 0 ? ' off' : ''));
+    s.style.display = (!sel && i !== 0) ? 'none' : 'block';
+  });
+}
+[59,149,240,331].forEach(function(cx, i){
+  var s = el(S.felt, 'ring', 'left:'+(cx-39)+'px;top:552px;width:78px;height:78px');
+  s.onclick = function(e){ e.stopPropagation(); pendingFelt = FELTS[i]; drawSwatches(); setTint('felt', pendingFelt); };
+  swatches.push(s);
+  /* keep the swatch tappable even when its ring is hidden */
+  var hs = el(S.felt, 'hs', 'left:'+(cx-39)+'px;top:552px;width:78px;height:78px;border-radius:50%');
+  hs.onclick = s.onclick;
+});
+function applyFelt(f){
+  felt = f;
+  ['table','showdown','felt'].forEach(function(id){ setTint(id, f); });
+}
+
+/* ---------- Table: draining turn timer ---------- */
+var timerBar = el(S.table, 'live', 'top:750px;height:3px;right:134px;width:0;background:#1e1f23;transition:none');
+function startTimer(){
+  timerBar.style.transition = 'none'; timerBar.style.width = '0';
+  void timerBar.offsetWidth;
+  timerBar.style.transition = 'width 30s linear'; timerBar.style.width = '242px';
+}
+
+/* ---------- fit the frame to desktop windows; real phones go edge to edge ---------- */
 function fit(){
   if(innerWidth <= 440){ phone.style.transform = ''; return; }
   var s = Math.min(1, (innerHeight-24)/855, (innerWidth-24)/393);
